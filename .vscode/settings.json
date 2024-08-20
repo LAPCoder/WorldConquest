@@ -1,0 +1,13 @@
+{
+	"files.associations": {
+		"*.4u": "4u",
+		"*.lex": "lex",
+		"*.bfed": "bfed",
+		"*.h": "c",
+		"*.ino": "arduino",
+		"*.JSON-tmLanguage": "json",
+		"*.hex": "hexEditor.hexedit",
+		"*.ini": "hexEditor.hexedit",
+		"limits": "cpp"
+	}
+}
