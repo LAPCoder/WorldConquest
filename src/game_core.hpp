@@ -59,12 +59,13 @@ namespace wc
 	{
 		private:
     		static unsigned idCounter;
+			// Contains the name of each country
 			static std::vector<std::string> allStates;
 			const  unsigned id; // An unique number to identify it
 
 		public:
 			std::string name; // The name of the state
-			infos land_infos;
+			infos country_infos;
 
 			explicit state();
 			explicit state(const std::string &);
@@ -72,6 +73,7 @@ namespace wc
 			bool loop();
 	};
 	
+	// Contains all the states
 	inline state *world;
 	inline unsigned nStates;
 

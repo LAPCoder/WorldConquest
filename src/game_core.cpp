@@ -1,6 +1,7 @@
 #include "game_core.hpp"
 
 unsigned wc::state::idCounter = 0;
+// TODO: Allstates is really useful?
 std::vector<std::string> wc::state::allStates = std::vector({std::string("")});
 
 // This is the game core
@@ -26,8 +27,11 @@ wc::state::~state()
 	return;
 }
 
+// The function called at each iteration of the main loop
+// Return 1 if there is no more state
 bool wc::state::loop()
 {
+	// Why do I need that?
 	// TODO: change the throws
 	#define safeAdd(a, b, min, max) do { \
 		     if ((a) > (max))       throw std::overflow_error("The number is too big"); \
@@ -55,37 +59,77 @@ bool wc::state::loop()
 	} while (0)
 
 	// Update all variables
+	// It degrades the stats over time
+
 	safeMultiply(
-		this->land_infos.happiness,
+		this->country_infos.happiness,
 		happiness_multiplier,
 		0,
 		std::numeric_limits<double>::max()
 	);
+
+	// + Taxes = - happiness
 	safeMultiply(
-		this->land_infos.happiness,
-		calcImpactTaxesOnHappiness(this->land_infos.money.taxes),
+		this->country_infos.happiness,
+		calcImpactTaxesOnHappiness(this->country_infos.money.taxes),
 		0,
 		std::numeric_limits<double>::max()
 	);
+
+	// Hapiness = natural increase
 	safeMultiply(
-		this->land_infos.population,
-		this->land_infos.happiness,
+		this->country_infos.population,
+		this->country_infos.happiness,
 		0,
 		std::numeric_limits<unsigned>::max()
 	);
 
-	if (this->land_infos.population < 1)
-		throw std::underflow_error("The number will be too low");
+	// Divide country if there is too many people in one country + hapiness < 0.5
+	if (this->country_infos.population > 100 && this->country_infos.happiness < 0.5)
+	{
+		// Divide the pop in two non-equal parts
+		double diviser = rand();
+		this->country_infos.population *= diviser;
 
 
+		// Create a new country
+		state new_country;
+		new_country.country_infos.population = this->country_infos.population * (1 - diviser);
+		new_country.country_infos.happiness = this->country_infos.happiness + 1;
+		new_country.country_infos.strength = this->country_infos.strength * 0.8;
+
+		// Merge the new country in the world
+
+
+
+	}
+
+	// Delete the country if the is nobody on it
+	// TODO: it dont erease the state in world
+	if (this->country_infos.population < 1)
+	{
+		this->allStates.erase(this->allStates.begin() + this->id);
+		std::cout << "The country " << this->name << " has been deleted\n";
+
+		// Check if there is no more country
+		if (this->allStates.empty())
+		{
+			std::cout << "There is no more country\n";
+			wc::exitWorld();
+			return 0;
+		}
+	}
+
+
+	// Display the stats
 	std::stringstream message;
 
-	message << "#=====================#"
+	message << "#==STATS OF THE country==#"
 	      << "\n| ID: " << this->id
 	      << "\n| Name: " << this->name
-	      << "\n| Pop: " << this->land_infos.population
-	      << "\n| Strength: " << this->land_infos.strength
-	      << "\n| Happiness: " << this->land_infos.happiness
+	      << "\n| Pop: " << this->country_infos.population
+	      << "\n| Strength: " << this->country_infos.strength
+	      << "\n| Happiness: " << this->country_infos.happiness
 	      << "\n#=====================#"
 	      << "\n";
 
@@ -106,13 +150,15 @@ bool wc::initWorld(unsigned num_of_states, std::pair<ull, ull> pop_range)
 	world = new state[num_of_states];
 	nStates = num_of_states;
 
+	// Get a seed
 	unsigned seed = std::chrono::system_clock::now().time_since_epoch().count();
 	std::ranlux24 generator(seed);
 	std::uniform_int_distribution<int> distribution(pop_range.first,pop_range.second);
 
+	// Assign each person to a set of carcteristics
 	for (unsigned i = 0; i < num_of_states; i++)
 	{
-		world[i].land_infos.population = distribution(generator);
+		world[i].country_infos.population = distribution(generator);
 	}
 
 	return 0;
@@ -128,6 +174,7 @@ void wc::exitWorld()
 	return;
 }
 
+// Do I really need to comment that? It works fine, so dont read it
 std::string wc::generateName()
 {
 	std::string name, tmp;
@@ -156,6 +203,8 @@ std::string wc::generateName()
 	return name;
 }
 
+// The main loop
+// It stops when it detect errors.
 bool wc::loopAll()
 {
 	while (true)
@@ -166,7 +215,7 @@ bool wc::loopAll()
 		{
 			try
 			{
-				world[i].loop();
+				if (! world[i].loop()) return 0;
 			}
 			catch (std::overflow_error &e)
 			{
